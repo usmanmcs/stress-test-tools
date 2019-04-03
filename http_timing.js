@@ -1,47 +1,36 @@
 const https = require('https');
+const request = require('request')
 
-
-var afterSeconds = 0.1;
+var afterSeconds = 0.2;
 var iterations = 10;
-var connections = [];
 var msgCount = 0;
 var errCount = 0;
 
-function create_connection() {
+const URL = 'https://google.com';
+
+function requestTiming() {
     return new Promise((resolve, reject) => {
-        https.get('https://google.com', (resp) => {
-            let data = '';
-
-            // A chunk of data has been recieved.
-            resp.on('data', (chunk) => {
-                data += chunk;
-            });
-
-            // The whole response has been received. Print out the result.
-            resp.on('end', () => {
-                msgCount++;
-                resolve(resp.statusCode);
-            });
-        }).on("error", (err) => {
-            //console.log(err);
-            errCount++;
-            resolve(err.code);
-        });
+        request({
+            uri: URL,
+            method: 'GET',
+            time: true
+        }, (err, resp) => {
+            if(err)
+                reject(err);
+            else
+                resolve([resp.timings, resp.timingPhases]);
+        })
     });
-
 }
 
 function createChunk() {
-    connections.push(create_connection());
-    Promise.all(connections).then(function(values) {
-        let result = { };
-        for(var i = 0; i < values.length; ++i) {
-            if(!result[values[i]])
-                result[values[i]] = 0;
-            ++result[values[i]];
-        }
-        console.log("total:", msgCount+errCount, "success:", msgCount, "error:", errCount, result);
-    });
+    requestTiming().then((resp) => {
+        msgCount = msgCount + 1;
+        console.log("total:", msgCount+errCount, "success:", msgCount, "error:", errCount, resp);
+    }).catch((err) => {
+        errCount = errCount + 1;
+        console.log("total:", msgCount+errCount, "success:", msgCount, "error:", errCount, values);
+    })
 }
 
 for (var j = 0; j < iterations; j++) {
@@ -49,6 +38,3 @@ for (var j = 0; j < iterations; j++) {
         createChunk()
     }, afterSeconds * j * 1000);
 }
-
-
-
